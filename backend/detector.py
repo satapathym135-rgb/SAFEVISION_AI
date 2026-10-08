@@ -1,5 +1,6 @@
 from pathlib import Path
 from ultralytics import YOLO
+import torch 
 
 
 class PPEDetector:
@@ -24,7 +25,7 @@ class PPEDetector:
         results = self.model.predict(
             source=source,
             conf=conf,
-            device=0,
+            device=0 if torch.cuda.is_available() else "cpu",
             verbose=False
         )
 
@@ -39,7 +40,7 @@ class PPEDetector:
         results = self.model.predict(
             source=frame,
             conf=conf,
-            device=0,
+            device=0 if torch.cuda.is_available() else "cpu",
             verbose=False
         )
 

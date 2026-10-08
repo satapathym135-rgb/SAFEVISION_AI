@@ -1,6 +1,6 @@
 from pathlib import Path
 from ultralytics import YOLO
-
+import torch
 
 class FireSmokeDetector:
     def __init__(self, model_path: str):
@@ -17,7 +17,7 @@ class FireSmokeDetector:
         results = self.model.predict(
             source=source,
             conf=conf,
-            device=0,
+            device=0 if torch.cuda.is_available() else "cpu",
             verbose=False
         )
 
@@ -27,7 +27,7 @@ class FireSmokeDetector:
         results = self.model.predict(
             source=frame,
             conf=conf,
-            device=0,
+            device=0 if torch.cuda.is_available() else "cpu",
             verbose=False
         )
 
