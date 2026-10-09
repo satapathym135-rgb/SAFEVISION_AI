@@ -13,9 +13,9 @@ from database.database import (
     WorkerDetection,
     SafetyViolation,
     FireSmokeEvent,
+    create_tables
 )
-from tracking.tracker import WorkerTracker
-
+from tracking.tracker import WorkerTracke
 
 # =========================================================
 # SafeVision AI - FastAPI Backend
@@ -27,6 +27,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
+@app.on_event("startup")
+def startup_event():
+    create_tables()
 
 # =========================================================
 # CORS - React Frontend Connection
