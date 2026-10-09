@@ -1,4 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://safevision-ai-cmki.onrender.com"
+).replace(/\/+$/, ""); 
 
 export async function getHealth() {
   const response = await fetch(`${API_BASE_URL}/health`);
@@ -94,7 +97,6 @@ export async function analyzeCameraFrame(blob: Blob) {
 }
 export async function detectFireSmoke(file: File) {
   const formData = new FormData();
-
   formData.append("file", file);
 
   const response = await fetch(
@@ -105,9 +107,23 @@ export async function detectFireSmoke(file: File) {
     }
   );
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    throw new Error("Failed to detect fire/smoke");
+    console.error(
+      "Fire/Smoke API error:",
+      response.status,
+      responseText
+    );
+
+    throw new Error(
+      `Fire/Smoke failed (${response.status}): ${responseText}`
+    );
   }
 
-  return response.json();
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error("Backend returned an invalid JSON response.");
+  }
 }
