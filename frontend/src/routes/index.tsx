@@ -86,71 +86,66 @@ function Dashboard() {
   // SIREN
   // --------------------------------------------------
 
-  const playSafetySiren = () => {
-    try {
-      const AudioContextClass =
-        window.AudioContext ||
-        (window as any).webkitAudioContext;
+const sirenAudioContextRef = useRef<AudioContext | null>(null);
 
-      if (!AudioContextClass) return;
+const unlockSirenAudio = async () => {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as any).webkitAudioContext;
 
-      const audioContext =
-        new AudioContextClass();
-
-      if (audioContext.state === "suspended") {
-        audioContext.resume();
-      }
-
-      for (let i = 0; i < 3; i++) {
-        window.setTimeout(() => {
-          const oscillator =
-            audioContext.createOscillator();
-
-          const gainNode =
-            audioContext.createGain();
-
-          oscillator.type = "square";
-
-          oscillator.frequency.setValueAtTime(
-            900,
-            audioContext.currentTime
-          );
-
-          oscillator.frequency.linearRampToValueAtTime(
-            1300,
-            audioContext.currentTime + 0.15
-          );
-
-          gainNode.gain.setValueAtTime(
-            0.25,
-            audioContext.currentTime
-          );
-
-          oscillator.connect(gainNode);
-          gainNode.connect(
-            audioContext.destination
-          );
-
-          oscillator.start();
-
-          window.setTimeout(() => {
-            oscillator.stop();
-
-            if (i === 2) {
-              window.setTimeout(() => {
-                audioContext.close();
-              }, 100);
-            }
-          }, 350);
-        }, i * 500);
-      }
-    } catch (error) {
-      console.error(
-        "Safety siren error:",
-        error
-      );
+    if (!AudioContextClass) {
+      console.error("AudioContext is not supported");
+      return;
     }
-  };
+
+    let audioContext = sirenAudioContextRef.current;
+
+    if (!audioContext || audioContext.state === "closed") {
+      audioContext = new AudioContextClass();
+      sirenAudioContextRef.current = audioContext;
+    }
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+  } catch (error) {
+    console.error("Could not unlock siren audio:", error);
+  }
+};
+
+const playSafetySiren = async () => {
+  try {
+    await unlockSirenAudio();
+
+    const audioContext = sirenAudioContextRef.current;
+    if (!audioContext || audioContext.state !== "running") {
+      console.error("Siren audio is not running");
+      return;
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const startAt = audioContext.currentTime + i * 0.5;
+
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(900, startAt);
+      oscillator.frequency.linearRampToValueAtTime(1300, startAt + 0.15);
+
+      gainNode.gain.setValueAtTime(0.25, startAt);
+      gainNode.gain.setValueAtTime(0, startAt + 0.36);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start(startAt);
+      oscillator.stop(startAt + 0.37);
+    }
+  } catch (error) {
+    console.error("Safety siren error:", error);
+  }
+};
 
   // --------------------------------------------------
   // DASHBOARD DATA
@@ -212,6 +207,7 @@ function Dashboard() {
 
   const startLiveCamera = async () => {
     try {
+      await unlockSirenAudio();
       setCameraError("");
 
       const stream =
