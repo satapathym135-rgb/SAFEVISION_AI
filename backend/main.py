@@ -29,7 +29,9 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_event():
+    print("SAFEVISION STARTUP: Creating database tables...")
     create_tables()
+    print("SAFEVISION STARTUP: Database tables created.")
 
 # =========================================================
 # CORS - React Frontend Connection
