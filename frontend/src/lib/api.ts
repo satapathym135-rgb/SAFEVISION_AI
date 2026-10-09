@@ -127,3 +127,71 @@ export async function detectFireSmoke(file: File) {
     throw new Error("Backend returned an invalid JSON response.");
   }
 }
+
+export type PpeDetectionItem = {
+  class: string;
+  confidence: number;
+  bbox: number[];
+};
+
+export type WorkerPpeDetection = {
+  worker_id: string;
+  track_id: number | null;
+  bbox: number[];
+  confidence: number;
+  helmet: boolean;
+  vest: boolean;
+  gloves: boolean;
+  goggles: boolean;
+  boots: boolean;
+  compliance_score: number;
+  risk_level: string;
+  violations: string[];
+  ppe_detections: PpeDetectionItem[];
+};
+
+export type PpeDetectionResponse = {
+  success: boolean;
+  filename?: string;
+  workers?: WorkerPpeDetection[];
+  total_workers: number;
+  detections: PpeDetectionItem[];
+  total_detections: number;
+  tracking: string;
+  model: string;
+  database_saved: boolean;
+  detail?: string;
+};
+
+export async function detectPpeImage(file: File | Blob): Promise<PpeDetectionResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/detect/image`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    let errorDetail = responseText;
+    try {
+      const data = JSON.parse(responseText);
+      if (typeof data.detail === "string") {
+        errorDetail = data.detail;
+      }
+    } catch {
+      // not JSON
+    }
+    throw new Error(
+      errorDetail || `PPE Detection failed (${response.status})`
+    );
+  }
+
+  try {
+    return JSON.parse(responseText) as PpeDetectionResponse;
+  } catch {
+    throw new Error("Backend returned an invalid JSON response.");
+  }
+}
