@@ -4,14 +4,23 @@ from ultralytics import YOLO
 
 class WorkerTracker:
     """
-    Person detection and multi-worker tracking using ByteTrack.
+    Worker tracking using the existing trained PPE model
+    instead of loading a second YOLO model.
     """
 
-    def __init__(self, model_path: str = ""):
-        self.device = 0 if torch.cuda.is_available() else "cpu"
+    def __init__(self, model_path: str = "", model=None):
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-        # COCO-pretrained YOLO11s detects people.
-        self.model = YOLO("yolo11s.pt")
+        # Reuse the already-loaded PPE model when provided.
+        # Otherwise load the supplied trained model path.
+        if model is not None:
+            self.model = model
+        elif model_path:
+            self.model = YOLO(model_path)
+        else:
+            raise ValueError(
+                "Provide the trained PPE model or its model_path."
+            )
 
         print(f"SAFEVISION TRACKER DEVICE: {self.device}")
 
@@ -36,7 +45,8 @@ class WorkerTracker:
                 class_id = int(boxes.cls[i].item())
                 class_name = result.names[class_id]
 
-                if class_name != "person":
+                # Support both common label formats.
+                if class_name.lower() != "person":
                     continue
 
                 confidence = float(boxes.conf[i].item())
@@ -69,4 +79,4 @@ class WorkerTracker:
 
 
 if __name__ == "__main__":
-    print("YOLO11 Person + ByteTrack Worker Tracker ready.")
+    print("SafeVision PPE + ByteTrack Worker Tracker ready.")

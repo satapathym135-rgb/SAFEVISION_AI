@@ -133,9 +133,13 @@ def get_tracker():
     if tracker is None:
         try:
             # Ensure PPE model is downloaded and loaded first
-            get_detector()
+        
 
-            tracker = WorkerTracker(str(MODEL_PATH))
+            tracker = WorkerTracker(
+    str(MODEL_PATH),
+    model=get_detector().model,
+)
+            
         except Exception as e:
             raise HTTPException(
                 status_code=500,
