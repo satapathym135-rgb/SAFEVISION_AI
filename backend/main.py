@@ -106,24 +106,16 @@ fire_smoke_detector: Optional[FireSmokeDetector] = None
 # =========================================================
 
 def get_detector():
-
     global detector
 
     if detector is None:
-
-        if not MODEL_PATH.exists():
-
+        try:
+            detector = PPEDetector(str(MODEL_PATH))
+        except Exception as e:
             raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Trained PPE model not found. "
-                    f"Expected model at: {MODEL_PATH}"
-                ),
+                status_code=500,
+                detail=f"Could not load PPE model: {str(e)}",
             )
-
-        detector = PPEDetector(
-            str(MODEL_PATH)
-        )
 
     return detector
 
@@ -133,54 +125,41 @@ def get_detector():
 # =========================================================
 
 def get_tracker():
-
     global tracker
 
     if tracker is None:
+        try:
+            # Ensure PPE model is downloaded and loaded first
+            get_detector()
 
-        if not MODEL_PATH.exists():
-
+            tracker = WorkerTracker(str(MODEL_PATH))
+        except Exception as e:
             raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Trained PPE model not found. "
-                    f"Expected model at: {MODEL_PATH}"
-                ),
+                status_code=500,
+                detail=f"Could not initialize WorkerTracker: {str(e)}",
             )
 
-        tracker = WorkerTracker(
-            str(MODEL_PATH)
-        )
-
     return tracker
-
 
 # =========================================================
 # Fire / Smoke Detector
 # =========================================================
 
 def get_fire_smoke_detector():
-
     global fire_smoke_detector
 
     if fire_smoke_detector is None:
-
-        if not FIRE_SMOKE_MODEL_PATH.exists():
-
+        try:
+            fire_smoke_detector = FireSmokeDetector(
+                str(FIRE_SMOKE_MODEL_PATH)
+            )
+        except Exception as e:
             raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Trained Fire/Smoke model not found. "
-                    f"Expected model at: {FIRE_SMOKE_MODEL_PATH}"
-                ),
+                status_code=500,
+                detail=f"Could not load Fire/Smoke model: {str(e)}",
             )
 
-        fire_smoke_detector = FireSmokeDetector(
-            str(FIRE_SMOKE_MODEL_PATH)
-        )
-
     return fire_smoke_detector
-
 
 # =========================================================
 # Health Check
@@ -211,13 +190,27 @@ def health():
 
 @app.get("/model/status")
 def model_status():
+    cache_path = None
+
+    if detector is not None:
+        cache_path = str(detector.model_path)
+
+    local_model_available = MODEL_PATH.is_file()
+    model_loaded = detector is not None
 
     return {
         "model": "YOLO11s PPE",
         "model_path": str(MODEL_PATH),
-        "trained_model_available": MODEL_PATH.exists(),
+        "local_model_available": local_model_available,
+        "model_loaded": model_loaded,
+        "trained_model_available": local_model_available or model_loaded,
+        "loaded_model_path": cache_path,
+        "model_source": (
+            "Hugging Face cache" if model_loaded and not local_model_available
+            else "Local file" if local_model_available
+            else "Not loaded yet"
+        ),
     }
-
 
 # =========================================================
 # Fire / Smoke Model Status

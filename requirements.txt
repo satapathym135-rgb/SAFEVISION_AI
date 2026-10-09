@@ -54,3 +54,5 @@ ultralytics-platform==0.1.82
 ultralytics-thop==2.2.2
 urllib3==2.8.0
 uvicorn==0.54.0
+
+huggingface-hub

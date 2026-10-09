@@ -1,49 +1,60 @@
+import os
 from pathlib import Path
+
+import torch
+from huggingface_hub import hf_hub_download
 from ultralytics import YOLO
-import torch 
 
 
 class PPEDetector:
     def __init__(self, model_path: str):
-        self.model_path = Path(model_path)
+        local_path = Path(model_path)
 
-        if not self.model_path.exists():
-            raise FileNotFoundError(
-                f"Model file not found: {self.model_path}"
+        # First use the trained model if it exists locally.
+        if local_path.is_file():
+            self.model_path = local_path
+        else:
+            # Otherwise download the trained PPE model from Hugging Face.
+            repo_id = os.getenv(
+                "HF_MODEL_REPO",
+                "madhusmita77/SAFEVISION_AI_MODELS",
             )
+
+            self.model_path = Path(
+                hf_hub_download(
+                    repo_id=repo_id,
+                    filename="ppe/best.pt",
+                    repo_type="model",
+                )
+            )
+
+        if not self.model_path.is_file():
+            raise FileNotFoundError(
+                f"Trained PPE model not found: {self.model_path}"
+            )
+
+        device = 0 if torch.cuda.is_available() else "cpu"
+
+        print(f"SAFEVISION PPE MODEL: {self.model_path}")
+        print(f"SAFEVISION PPE DEVICE: {device}")
 
         self.model = YOLO(str(self.model_path))
 
     def predict(self, source, conf: float = 0.35):
-        """
-        Run PPE detection on an image/video frame.
-
-        source:
-            Image path, video frame, or other Ultralytics-compatible source.
-        """
-
-        results = self.model.predict(
+        return self.model.predict(
             source=source,
             conf=conf,
             device=0 if torch.cuda.is_available() else "cpu",
-            verbose=False
+            verbose=False,
         )
 
-        return results
-
     def detect_frame(self, frame, conf: float = 0.35):
-        """
-        Detect PPE objects in a single OpenCV frame.
-        Returns the raw YOLO result.
-        """
-
         results = self.model.predict(
             source=frame,
             conf=conf,
             device=0 if torch.cuda.is_available() else "cpu",
-            verbose=False
+            verbose=False,
         )
-
         return results[0]
 
 
