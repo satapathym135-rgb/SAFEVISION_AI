@@ -15,7 +15,7 @@ from database.database import (
     FireSmokeEvent,
     create_tables
 )
-from tracking.tracker import WorkerTracke
+from tracking.tracker import WorkerTracker
 
 # =========================================================
 # SafeVision AI - FastAPI Backend
